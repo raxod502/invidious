@@ -26,7 +26,7 @@ struct VideoPreferences
   property save_player_pos : Bool
 end
 
-def process_video_params(query, preferences)
+def process_video_params(query, preferences, saved_pos)
   annotations = query["iv_load_policy"]?.try &.to_i?
   autoplay = query["autoplay"]?.try { |q| (q == "true" || q == "1").to_unsafe }
   comments = query["comments"]?.try &.split(",").map(&.downcase)
@@ -111,6 +111,7 @@ def process_video_params(query, preferences)
   if start = query["t"]? || query["time_continue"]? || query["start"]?
     video_start = decode_time(start)
   end
+  video_start ||= saved_pos
   video_start ||= 0
 
   if query["end"]?

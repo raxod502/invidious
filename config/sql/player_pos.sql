@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS public.player_pos
     video_id text,
     user_id text,
     pos integer,
+    updated timestamp with time zone,
     PRIMARY KEY (video_id,user_id)
 );
 

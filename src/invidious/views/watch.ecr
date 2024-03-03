@@ -65,7 +65,8 @@ we're going to need to do it here in order to allow for translations.
     "vr" => video.is_vr,
     "projection_type" => video.projection_type,
     "local_disabled" => CONFIG.disabled?("local"),
-    "support_reddit" => true
+    "support_reddit" => true,
+    "saved_pos_updated" => saved_pos_updated,
 }.to_pretty_json
 %>
 </script>

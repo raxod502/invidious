@@ -351,8 +351,9 @@ if (video_data.params.save_player_pos) {
     const rememberedTime = get_video_time();
     let lastUpdated = 0;
 
-    if(!hasTimeParam) set_seconds_after_start(rememberedTime);
+    if(!hasTimeParam && video_data.preferences.video_start === 0) set_seconds_after_start(rememberedTime);
 
+    let updatesSinceSync = 0;
     player.on('timeupdate', function () {
         const raw = player.currentTime();
         const time = Math.floor(raw);
@@ -360,6 +361,11 @@ if (video_data.params.save_player_pos) {
         if(lastUpdated !== time && raw <= video_data.length_seconds - 15) {
             save_video_time(time);
             lastUpdated = time;
+            updatesSinceSync += 1;
+            if (updatesSinceSync >= 15) {
+                helpers.xhr('POST', `/api/v1/auth/player-pos?id=${video_data.id}&ts=${time}`, {entity_name: 'update player position'}, {})
+                updatesSinceSync = 0;
+            }
         }
     });
 }

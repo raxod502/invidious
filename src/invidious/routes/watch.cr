@@ -41,14 +41,20 @@ module Invidious::Routes::Watch
     preferences = env.get("preferences").as(Preferences)
 
     user = env.get?("user").try &.as(User)
+    saved_pos = nil
+    saved_pos_updated = nil
     if user
       subscriptions = user.subscriptions
       watched = user.watched
       notifications = user.notifications
+      saved_pos_info = Invidious::Database::PlayerPos.select(user, id)
+      if saved_pos_info
+        saved_pos, saved_pos_updated = saved_pos_info
+      end
     end
     subscriptions ||= [] of String
 
-    params = process_video_params(env.params.query, preferences)
+    params = process_video_params(env.params.query, preferences, saved_pos)
     env.params.query.delete_all("listen")
 
     begin
