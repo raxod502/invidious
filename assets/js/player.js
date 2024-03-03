@@ -351,7 +351,7 @@ if (video_data.params.save_player_pos) {
     const {ts: rememberedTime, updated: rememberedTimeUpdated} = get_video_time();
     let lastUpdated = 0;
 
-    const shouldUseRemembered = rememberedTimeUpdated > 0 && (!video_data.saved_pos_updated || rememberedTimeUpdated > new Date(video_data.saved_pos_updated / 1000));
+    const shouldUseRemembered = rememberedTimeUpdated > 0 && (!video_data.saved_pos_updated || rememberedTimeUpdated > new Date(video_data.saved_pos_updated) / 1000);
 
     if(!hasTimeParam && shouldUseRemembered) set_seconds_after_start(rememberedTime);
 
