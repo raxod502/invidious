@@ -348,20 +348,29 @@ if (video_data.premiere_timestamp && Math.round(new Date() / 1000) < video_data.
 if (video_data.params.save_player_pos) {
     const url = new URL(location);
     const hasTimeParam = url.searchParams.has('t');
-    const rememberedTime = get_video_time();
+    const {ts: rememberedTime, updated: rememberedTimeUpdated} = get_video_time();
     let lastUpdated = 0;
 
-    if(!hasTimeParam && video_data.preferences.video_start === 0) set_seconds_after_start(rememberedTime);
+    const shouldUseRemembered = rememberedTimeUpdated > 0 && (!video_data.saved_pos_updated || rememberedTimeUpdated > new Date(video_data.saved_pos_updated / 1000));
 
+    if(!hasTimeParam && shouldUseRemembered) set_seconds_after_start(rememberedTime);
+
+    let updatesSinceSave = 0;
     let updatesSinceSync = 0;
     player.on('timeupdate', function () {
         const raw = player.currentTime();
         const time = Math.floor(raw);
 
         if(lastUpdated !== time && raw <= video_data.length_seconds - 15) {
-            save_video_time(time);
-            lastUpdated = time;
+            updatesSinceSave += 1;
+            // Avoid saving instantly, give it 15 seconds of playback
+            // before starting to save, in case the user fat fingered
+            // the seekbar while loading the video.
+            if (updatesSinceSave >= 15) {
+                save_video_time(time);
+            }
             updatesSinceSync += 1;
+            lastUpdated = time;
             if (updatesSinceSync >= 15) {
                 helpers.xhr('POST', `/api/v1/auth/player-pos?id=${video_data.id}&ts=${time}`, {entity_name: 'update player position'}, {})
                 updatesSinceSync = 0;
@@ -496,12 +505,12 @@ function set_seconds_after_start(delta) {
 
 function save_video_time(seconds) {
     const all_video_times = get_all_video_times();
-    all_video_times[video_data.id] = seconds;
+    all_video_times[video_data.id] = {ts: seconds, updated: Math.round(new Date() / 1000)};
     helpers.storage.set(save_player_pos_key, all_video_times);
 }
 
 function get_video_time() {
-    return get_all_video_times()[video_data.id] || 0;
+    return get_all_video_times()[video_data.id] || {ts: 0, updated: 0};
 }
 
 function get_all_video_times() {
