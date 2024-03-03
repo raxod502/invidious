@@ -113,6 +113,23 @@ module Invidious::Routes::API::V1::Authenticated
     env.response.status_code = 204
   end
 
+  def self.update_player_pos(env)
+    user = env.get("user").as(User)
+
+    id = env.params.query["id"]
+    if !id.match(/^[a-zA-Z0-9_-]{11}$/)
+      return error_json(400, "Invalid video id.")
+    end
+
+    ts = env.params.query["ts"]?.try &.to_i?
+    if !ts
+      return error_json(400, "Invalid timestamp.")
+    end
+
+    Invidious::Database::PlayerPos.update_player_pos(user, id, ts)
+    env.response.status_code = 204
+  end
+
   def self.feed(env)
     env.response.content_type = "application/json"
 
