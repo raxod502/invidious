@@ -10,8 +10,8 @@ Type=simple
 User=invidious
 Group=invidious
 
-WorkingDirectory=/home/invidious/invidious
-ExecStart=/home/invidious/invidious/invidious -o invidious.log
+WorkingDirectory=/home/invidious/files/invidious
+ExecStart=/home/invidious/files/invidious/invidious -o invidious.log
 
 Restart=always
 
