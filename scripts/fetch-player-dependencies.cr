@@ -41,6 +41,23 @@ def update_versions_yaml(required_dependencies, minified, dep_name)
   end
 end
 
+# https://github.com/crystal-lang/crystal/issues/2721
+# https://github.com/j8r/crystal/commit/c613bbdc55b42418d4a70f9161a510b3025714be
+def http_get_following_redirects(url, &)
+  done = false
+  while !done
+    HTTP::Client.get(url) do |response|
+      case response.status_code
+      when 300, 301, 302, 303, 307, 308
+        url = response.headers["Location"]
+      else
+        yield response
+        done = true
+      end
+    end
+  end
+end
+
 # The first step is to check which dependencies we'll need to install.
 # If the version we have requested in `videojs-dependencies.yml` is the
 # same as what we've installed, we shouldn't do anything. Likewise, if it's
@@ -83,7 +100,12 @@ dependencies_to_install.each do |dep|
     download_path = "#{tmp_dir_path}/#{dep}"
     dest_path = "assets/videojs/#{dep}"
 
-    HTTP::Client.get("https://registry.npmjs.org/#{dep}/-/#{dep}-#{required_dependencies[dep]["version"]}.tgz") do |response|
+    url = "https://registry.npmjs.org/#{dep}/-/#{dep}-#{required_dependencies[dep]["version"]}.tgz"
+    if required_dependencies[dep]["github"]?
+      url = "https://github.com/#{required_dependencies[dep]["github"]}/archive/#{required_dependencies[dep]["version"]}.tar.gz"
+    end
+
+    http_get_following_redirects(url) do |response|
       Dir.mkdir(download_path)
       data = response.body_io.gets_to_end
       File.write("#{download_path}/package.tgz", data)
@@ -96,28 +118,18 @@ dependencies_to_install.each do |dep|
 
     # Unless we install an external dependency, crystal provides no way of extracting a tarball.
     # Thus we'll go ahead and call a system command.
-    `tar -vzxf '#{download_path}/package.tgz' -C '#{download_path}'`
+    `tar -vzxf '#{download_path}/package.tgz' -C '#{download_path}' --strip-components=1`
     raise "Extraction for #{dep} failed" if !$?.success?
 
     # Would use File.rename in the following steps but for some reason it just doesn't work here.
     # Video.js itself is structured slightly differently
     dep = "video" if dep == "video.js"
 
-    # This dep nests everything under an additional JS or CSS folder
-    if dep == "silvermine-videojs-quality-selector"
-      js_path = "js/"
-
-      # It also stores their quality selector as `quality-selector.css`
-      `mv #{download_path}/package/dist/css/quality-selector.css #{dest_path}/quality-selector.css`
-    else
-      js_path = ""
-    end
-
     # Would use File.rename but for some reason it just doesn't work here.
-    if minified && File.exists?("#{download_path}/package/dist/#{js_path}#{dep}.min.js")
-      `mv #{download_path}/package/dist/#{js_path}#{dep}.min.js #{dest_path}/#{dep}.js`
+    if minified && File.exists?("#{download_path}/dist/#{dep}.min.js")
+      `mv #{download_path}/dist/#{dep}.min.js #{dest_path}/#{dep}.js`
     else
-      `mv #{download_path}/package/dist/#{js_path}#{dep}.js #{dest_path}/#{dep}.js`
+      `mv #{download_path}/dist/#{dep}.js #{dest_path}/#{dep}.js`
     end
 
     # Fetch CSS which isn't guaranteed to exist
@@ -128,11 +140,11 @@ dependencies_to_install.each do |dep|
     # VideoJS marker uses a dot on the CSS files.
     dep = "videojs.markers" if dep == "videojs-markers"
 
-    if File.exists?("#{download_path}/package/dist/#{dep}.css")
+    if File.exists?("#{download_path}/dist/#{dep}.css")
       if minified && File.exists?("#{download_path}/package/dist/#{dep}.min.css")
-        `mv #{download_path}/package/dist/#{dep}.min.css #{dest_path}/#{dep}.css`
+        `mv #{download_path}/dist/#{dep}.min.css #{dest_path}/#{dep}.css`
       else
-        `mv #{download_path}/package/dist/#{dep}.css #{dest_path}/#{dep}.css`
+        `mv #{download_path}/dist/#{dep}.css #{dest_path}/#{dep}.css`
       end
     end
 

@@ -18,7 +18,6 @@ var options = {
             'Spacer',
             'captionsButton',
             'audioTrackButton',
-            'qualitySelector',
             'playbackRateMenuButton',
             'fullscreenToggle'
         ]
