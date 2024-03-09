@@ -106,7 +106,7 @@ ul.vjs-menu-content::-webkit-scrollbar {
 }
 
 .vjs-quality-selector,
-.video-js .vjs-http-source-selector {
+.video-js .vjs-quality-menu-wrapper {
   order: 4;
 }
 
