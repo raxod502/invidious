@@ -233,7 +233,9 @@ if (isMobile()) {
     // The share and http source selector element can't be fetched till the players ready.
     player.one('playing', function () {
         var share_element = document.getElementsByClassName('vjs-share-control')[0];
-        operations_bar_element.append(share_element);
+        if (share_element) {
+            operations_bar_element.append(share_element);
+        }
 
         if (!video_data.params.listen && video_data.params.quality === 'dash') {
             var http_source_selector = document.getElementsByClassName('vjs-quality-menu-button vjs-menu-button')[0];
