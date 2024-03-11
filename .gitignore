@@ -7,4 +7,4 @@
 /invidious
 /sentry
 /config/config.yml
-/invidious.log
+/invidious.log*
