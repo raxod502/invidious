@@ -18,7 +18,6 @@ var options = {
             'Spacer',
             'captionsButton',
             'audioTrackButton',
-            'QualityMenuButton',
             'playbackRateMenuButton',
             'fullscreenToggle'
         ]
@@ -211,6 +210,7 @@ if (isMobile()) {
             'volumePanel',
             'captionsButton',
             'audioTrackButton',
+            'qualityMenuButton',
             'playbackRateMenuButton',
         ];
 
@@ -221,18 +221,18 @@ if (isMobile()) {
             name: "mobileOperationsBar",
             playbackRates: [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
         });
-
-        // Remove operation buttons from primary control bar
-        var primary_control_bar = player.getChild('controlBar');
-        buttons.forEach(function (child) {primary_control_bar.removeChild(child);});
-
-        // Move them to mobile bar
-        buttons.slice(1).forEach(function (child) {operations_bar.addChild(child);});
-
-        // Display mobile bar
-        var operations_bar_element = operations_bar.el();
-        operations_bar_element.classList.add('mobile-operations-bar');
+        operations_bar.addClass("mobile-operations-bar");
         player.addChild(operations_bar);
+
+        // Move operation buttons from to secondary control bar
+        var primary_control_bar = player.getChild('controlBar');
+        buttons.forEach(function (child) {
+            const elt = primary_control_bar.getChild(child);
+            primary_control_bar.removeChild(elt);
+            if (child !== "playToggle") {
+                operations_bar.addChild(elt);
+            }
+        });
     });
 }
 
