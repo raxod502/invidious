@@ -376,16 +376,30 @@ if (video_data.params.save_player_pos) {
         const raw = player.currentTime();
         const time = Math.floor(raw);
 
-        if(lastUpdated !== time && raw <= video_data.length_seconds - 15) {
+        if (lastUpdated !== time) {
+            if (time !== lastUpdated + 1) {
+                // User is seeking around, we should wait for 15
+                // seconds of normal playback before saving the
+                // playback position, so that if you fat finger the
+                // seekbar then you can just reload the page to get
+                // back to where you were previously.
+                updatesSinceSave = 0;
+                updatedSinceSync = 0;
+                return;
+            }
             updatesSinceSave += 1;
-            // Avoid saving instantly, give it 15 seconds of playback
-            // before starting to save, in case the user fat fingered
-            // the seekbar while loading the video.
+            updatedSinceSync += 1;
+            lastUpdated = time;
+            // Once 15 seconds of continuous playback have passed,
+            // save the playback time locally every second, it is fast
+            // and safe. Though, if the user seeks elsewhere, the code
+            // above will set the counter back to zero and we will
+            // wait a bit before starting to save again.
             if (updatesSinceSave >= 15) {
                 save_video_time(time);
             }
-            updatesSinceSync += 1;
-            lastUpdated = time;
+            // Only post to the server every 15 seconds at most, that
+            // is a much more expensive operation.
             if (updatesSinceSync >= 15) {
                 helpers.xhr('POST', `/api/v1/auth/player-pos?id=${video_data.id}&ts=${time}`, {entity_name: 'update player position'}, {})
                 updatesSinceSync = 0;
