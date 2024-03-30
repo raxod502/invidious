@@ -106,13 +106,15 @@ dependencies_to_install.each do |dep|
     end
 
     http_get_following_redirects(url) do |response|
-      Dir.mkdir(download_path)
+      Dir.mkdir(download_path) if !Dir.exists? download_path
       data = response.body_io.gets_to_end
       File.write("#{download_path}/package.tgz", data)
 
       # https://github.com/iv-org/invidious/pull/2397#issuecomment-922375908
-      if `sha1sum #{download_path}/package.tgz`.split(" ")[0] != required_dependencies[dep]["shasum"]
-        raise Exception.new("Checksum for '#{dep}' failed")
+      sum_want = required_dependencies[dep]["shasum"]
+      sum_got = `sha1sum #{download_path}/package.tgz`.split(" ")[0]
+      if sum_want != sum_got
+        raise Exception.new("Checksum for '#{dep}' failed (want #{sum_want}, got #{sum_got})")
       end
     end
 
