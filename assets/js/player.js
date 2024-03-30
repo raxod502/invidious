@@ -203,7 +203,17 @@ function isMobile() {
 }
 
 if (isMobile()) {
-    player.mobileUi({ touchControls: { seekSeconds: 5 * player.playbackRate() } });
+    player.mobileUi({
+        touchControls: {
+            seekSeconds: 5 * player.playbackRate(),
+        },
+        fullscreen: {
+            enterOnRotate: false,
+            exitOnRotate: false,
+            lockOnRotate: false,
+            lockToLandscapeOnEnter: false,
+        },
+    });
 
     player.one('playing', function () {
         var buttons = [
