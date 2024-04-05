@@ -384,11 +384,12 @@ if (video_data.params.save_player_pos) {
                 // seekbar then you can just reload the page to get
                 // back to where you were previously.
                 updatesSinceSave = 0;
-                updatedSinceSync = 0;
+                updatesSinceSync = 0;
+                lastUpdated = time;
                 return;
             }
             updatesSinceSave += 1;
-            updatedSinceSync += 1;
+            updatesSinceSync += 1;
             lastUpdated = time;
             // Once 15 seconds of continuous playback have passed,
             // save the playback time locally every second, it is fast
