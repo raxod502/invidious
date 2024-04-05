@@ -54,7 +54,7 @@ module Invidious::Routes::Watch
     end
     subscriptions ||= [] of String
 
-    params = process_video_params(env.params.query, preferences, saved_pos)
+    params = process_video_params(env.params.query, preferences)
     env.params.query.delete_all("listen")
 
     begin

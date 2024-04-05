@@ -119,9 +119,7 @@ module Invidious::Routes::Embed
     else nil # Continue
     end
 
-    # Do not save playback history persistently from embeds
-    # TODO: find out if this is the right thing to do
-    params = process_video_params(env.params.query, preferences, nil)
+    params = process_video_params(env.params.query, preferences)
 
     user = env.get?("user").try &.as(User)
     if user

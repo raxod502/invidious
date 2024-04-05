@@ -366,9 +366,14 @@ if (video_data.params.save_player_pos) {
     const {ts: rememberedTime, updated: rememberedTimeUpdated} = get_video_time();
     let lastUpdated = 0;
 
-    const shouldUseRemembered = rememberedTimeUpdated > 0 && (!video_data.saved_pos_updated || rememberedTimeUpdated > new Date(video_data.saved_pos_updated) / 1000);
+    const useFrontendSavedPos = rememberedTimeUpdated > 0 && (!video_data.saved_pos_updated || rememberedTimeUpdated > new Date(video_data.saved_pos_updated) / 1000);
 
-    if(!hasTimeParam && shouldUseRemembered) set_seconds_after_start(rememberedTime);
+    if (!hasTimeParam) {
+        if (useFrontendSavedPos)
+            set_seconds_after_start(rememberedTime);
+        else if (video_data.saved_pos_updated)
+            set_seconds_after_start(video_data.saved_pos);
+    }
 
     let updatesSinceSave = 0;
     let updatesSinceSync = 0;
