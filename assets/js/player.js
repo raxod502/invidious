@@ -360,7 +360,7 @@ if (video_data.premiere_timestamp && Math.round(new Date() / 1000) < video_data.
     player.getChild('bigPlayButton').hide();
 }
 
-if (video_data.params.save_player_pos) {
+if (video_data.params.save_player_pos && !video_data.params.autoplay) {
     const url = new URL(location);
     const hasTimeParam = url.searchParams.has('t');
     const {ts: rememberedTime, updated: rememberedTimeUpdated} = get_video_time();
