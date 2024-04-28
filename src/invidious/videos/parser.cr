@@ -50,9 +50,9 @@ def parse_related_video(related : JSON::Any) : Hash(String, JSON::Any)?
   }
 end
 
-def extract_video_info(video_id : String, proxy_region : String? = nil)
+def extract_video_info(video_id : String)
   # Init client config for the API
-  client_config = YoutubeAPI::ClientConfig.new(proxy_region: proxy_region)
+  client_config = YoutubeAPI::ClientConfig.new
 
   # Fetch data from the player endpoint
   player_response = YoutubeAPI.player(video_id: video_id, params: "", client_config: client_config)
@@ -102,24 +102,12 @@ def extract_video_info(video_id : String, proxy_region : String? = nil)
 
   new_player_response = nil
 
-  begin
-    if reason.nil?
-      # Fetch the video streams using an Android client in order to get the
-      # decrypted URLs and maybe fix throttling issues (#2194). See the
-      # following issue for an explanation about decrypted URLs:
-      # https://github.com/TeamNewPipe/NewPipeExtractor/issues/562
-      client_config.client_type = YoutubeAPI::ClientType::Android
-      new_player_response = try_fetch_streaming_data(video_id, client_config)
-    elsif !reason.includes?("your country") # Handled separately
-      # The Android embedded client could help here
-      client_config.client_type = YoutubeAPI::ClientType::AndroidScreenEmbed
-      new_player_response = try_fetch_streaming_data(video_id, client_config)
-    end
-  rescue VideoNotAvailableException
-    # YouTube returns the "Video Not Available" video data instead of the
-    # video itself, but not on HTML5
-    Log.warn { "YouTube's Android client did not return the video we were looking for, Falling back on HTML5 client" }
-    client_config.client_type = YoutubeAPI::ClientType::TvHtml5ScreenEmbed
+  if reason.nil?
+    # Fetch the video streams using an Android client in order to get the
+    # decrypted URLs and maybe fix throttling issues (#2194). See the
+    # following issue for an explanation about decrypted URLs:
+    # https://github.com/TeamNewPipe/NewPipeExtractor/issues/562
+    client_config.client_type = YoutubeAPI::ClientType::AndroidTestSuite
     new_player_response = try_fetch_streaming_data(video_id, client_config)
   end
 
@@ -131,8 +119,9 @@ def extract_video_info(video_id : String, proxy_region : String? = nil)
 
   # Replace player response and reset reason
   if !new_player_response.nil?
-    # Preserve storyboard data before replacement
+    # Preserve captions & storyboard data before replacement
     new_player_response["storyboards"] = player_response["storyboards"] if player_response["storyboards"]?
+    new_player_response["captions"] = player_response["captions"] if player_response["captions"]?
 
     player_response = new_player_response
     params.delete("reason")
@@ -150,9 +139,7 @@ end
 
 def try_fetch_streaming_data(id : String, client_config : YoutubeAPI::ClientConfig) : Hash(String, JSON::Any)?
   LOGGER.debug("try_fetch_streaming_data: [#{id}] Using #{client_config.client_type} client.")
-  # CgIIAdgDAQ%3D%3D is a workaround for streaming URLs that returns a 403.
-  # https://github.com/LuanRT/YouTube.js/pull/624
-  response = YoutubeAPI.player(video_id: id, params: "CgIIAdgDAQ%3D%3D", client_config: client_config)
+  response = YoutubeAPI.player(video_id: id, params: "2AMB", client_config: client_config)
 
   playability_status = response["playabilityStatus"]["status"]
   LOGGER.debug("try_fetch_streaming_data: [#{id}] Got playabilityStatus == #{playability_status}.")
@@ -160,7 +147,7 @@ def try_fetch_streaming_data(id : String, client_config : YoutubeAPI::ClientConf
   if id != response.dig("videoDetails", "videoId")
     # YouTube may return a different video player response than expected.
     # See: https://github.com/TeamNewPipe/NewPipe/issues/8713
-    raise VideoNotAvailableException.new(
+    raise InfoException.new(
       "The video returned by YouTube isn't the requested one. (#{client_config.client_type} client)"
     )
   elsif playability_status == "OK"
@@ -224,6 +211,9 @@ def parse_video_info(video_id : String, player_response : Hash(String, JSON::Any
   live_now = microformat.dig?("liveBroadcastDetails", "isLiveNow")
     .try &.as_bool || false
 
+  post_live_dvr = video_details.dig?("isPostLiveDvr")
+    .try &.as_bool || false
+
   # Extra video infos
 
   allowed_regions = microformat["availableCountries"]?
@@ -275,7 +265,18 @@ def parse_video_info(video_id : String, player_response : Hash(String, JSON::Any
     .try &.dig?("videoActions", "menuRenderer", "topLevelButtons")
 
   if toplevel_buttons
-    likes_button = toplevel_buttons.try &.as_a
+    # New Format as of december 2023
+    likes_button = toplevel_buttons.dig?(0,
+      "segmentedLikeDislikeButtonViewModel",
+      "likeButtonViewModel",
+      "likeButtonViewModel",
+      "toggleButtonViewModel",
+      "toggleButtonViewModel",
+      "defaultButtonViewModel",
+      "buttonViewModel"
+    )
+
+    likes_button ||= toplevel_buttons.try &.as_a
       .find(&.dig?("toggleButtonRenderer", "defaultIcon", "iconType").=== "LIKE")
       .try &.["toggleButtonRenderer"]
 
@@ -288,9 +289,10 @@ def parse_video_info(video_id : String, player_response : Hash(String, JSON::Any
       )
 
     if likes_button
+      likes_txt = likes_button.dig?("accessibilityText")
       # Note: The like count from `toggledText` is off by one, as it would
       # represent the new like count in the event where the user clicks on "like".
-      likes_txt = (likes_button["defaultText"]? || likes_button["toggledText"]?)
+      likes_txt ||= (likes_button["defaultText"]? || likes_button["toggledText"]?)
         .try &.dig?("accessibility", "accessibilityData", "label")
       likes = likes_txt.as_s.gsub(/\D/, "").to_i64? if likes_txt
 
@@ -413,6 +415,7 @@ def parse_video_info(video_id : String, player_response : Hash(String, JSON::Any
     "isListed"         => JSON::Any.new(is_listed || false),
     "isUpcoming"       => JSON::Any.new(is_upcoming || false),
     "keywords"         => JSON::Any.new(keywords.map { |v| JSON::Any.new(v) }),
+    "isPostLiveDvr"    => JSON::Any.new(post_live_dvr),
     # Related videos
     "relatedVideos" => JSON::Any.new(related),
     # Description
