@@ -120,6 +120,10 @@ module Invidious::Database::Users
   # -------------------
 
   def add_notification(video : ChannelVideo)
+    if video.length_seconds <= 65 || video.views == 0 || video.views == nil
+      return
+    end
+
     request = <<-SQL
       UPDATE users
       SET notifications = array_append(notifications, $1),
