@@ -1,15 +1,15 @@
-# find the checksum of latest version using npm view package
+# find the checksum of latest version using npm view <package>
 video.js:
   version: 8.10.0
   shasum: 603a49909ef33f839264da8b73513f9daf592b57
 
 videojs-contrib-quality-levels:
-  version: 4.0.0
-  shasum: faa8096594cdbfc3ccbefe8572fc20531ba23f3d
+  version: 4.1.0
+  shasum: 44c2d2167114a5c8418548b10a25cb409d6cba51
 
 videojs-contrib-quality-menu:
-  version: 1.0.0
-  shasum: f5e8f855358e20854de23d7607634b5aabf4e9ac
+  version: 1.0.1
+  shasum: 991f641afabf1b346088f290efcf689688e42368
 
 videojs-markers:
   version: 1.0.1
@@ -35,8 +35,20 @@ videojs-vtt-thumbnails:
   version: 0.0.13
   shasum: d1e7d47f4ed80bb52f5fc4f4bad4bfc871f5970f
 
-# Although this extension contains the complied variant in its git repo,
+# We're using iv-org's fork of videojs-quality-selector,
+# which isn't published on NPM, and doesn't have any
+# easy way of fetching the compiled variant.
+#
+# silvermine-videojs-quality-selector:
+#   version: 1.1.2
+#   shasum: 94033ff9ee52ba6da1263b97c9a74d5b3dfdf711
+
+
+# Ditto. Although this extension contains the complied variant in its git repo, 
 # it lacks any sort of versioning. As such, the script will ignore it.
 #
 # videojs-youtube-annotations:
 #   github: https://github.com/afrmtbl/videojs-youtube-annotations
+
+
+

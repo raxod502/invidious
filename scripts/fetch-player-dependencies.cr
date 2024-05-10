@@ -100,38 +100,41 @@ dependencies_to_install.each do |dep|
     download_path = "#{tmp_dir_path}/#{dep}"
     dest_path = "assets/videojs/#{dep}"
 
-    url = "https://registry.npmjs.org/#{dep}/-/#{dep}-#{required_dependencies[dep]["version"]}.tgz"
-    if required_dependencies[dep]["github"]?
-      url = "https://github.com/#{required_dependencies[dep]["github"]}/archive/#{required_dependencies[dep]["version"]}.tar.gz"
-    end
-
-    http_get_following_redirects(url) do |response|
-      Dir.mkdir(download_path) if !Dir.exists? download_path
+    HTTP::Client.get("https://registry.npmjs.org/#{dep}/-/#{dep}-#{required_dependencies[dep]["version"]}.tgz") do |response|
+      Dir.mkdir(download_path)
       data = response.body_io.gets_to_end
       File.write("#{download_path}/package.tgz", data)
 
       # https://github.com/iv-org/invidious/pull/2397#issuecomment-922375908
-      sum_want = required_dependencies[dep]["shasum"]
-      sum_got = `sha1sum #{download_path}/package.tgz`.split(" ")[0]
-      if sum_want != sum_got
-        raise Exception.new("Checksum for '#{dep}' failed (want #{sum_want}, got #{sum_got})")
+      if `sha1sum #{download_path}/package.tgz`.split(" ")[0] != required_dependencies[dep]["shasum"]
+        raise Exception.new("Checksum for '#{dep}' failed")
       end
     end
 
     # Unless we install an external dependency, crystal provides no way of extracting a tarball.
     # Thus we'll go ahead and call a system command.
-    `tar -vzxf '#{download_path}/package.tgz' -C '#{download_path}' --strip-components=1`
+    `tar -vzxf '#{download_path}/package.tgz' -C '#{download_path}'`
     raise "Extraction for #{dep} failed" if !$?.success?
 
     # Would use File.rename in the following steps but for some reason it just doesn't work here.
     # Video.js itself is structured slightly differently
     dep = "video" if dep == "video.js"
 
-    # Would use File.rename but for some reason it just doesn't work here.
-    if minified && File.exists?("#{download_path}/dist/#{dep}.min.js")
-      `mv #{download_path}/dist/#{dep}.min.js #{dest_path}/#{dep}.js`
+    # This dep nests everything under an additional JS or CSS folder
+    if dep == "silvermine-videojs-quality-selector"
+      js_path = "js/"
+
+      # It also stores their quality selector as `quality-selector.css`
+      `mv #{download_path}/package/dist/css/quality-selector.css #{dest_path}/quality-selector.css`
     else
-      `mv #{download_path}/dist/#{dep}.js #{dest_path}/#{dep}.js`
+      js_path = ""
+    end
+
+    # Would use File.rename but for some reason it just doesn't work here.
+    if minified && File.exists?("#{download_path}/package/dist/#{js_path}#{dep}.min.js")
+      `mv #{download_path}/package/dist/#{js_path}#{dep}.min.js #{dest_path}/#{dep}.js`
+    else
+      `mv #{download_path}/package/dist/#{js_path}#{dep}.js #{dest_path}/#{dep}.js`
     end
 
     # Fetch CSS which isn't guaranteed to exist
@@ -142,11 +145,11 @@ dependencies_to_install.each do |dep|
     # VideoJS marker uses a dot on the CSS files.
     dep = "videojs.markers" if dep == "videojs-markers"
 
-    if File.exists?("#{download_path}/dist/#{dep}.css")
+    if File.exists?("#{download_path}/package/dist/#{dep}.css")
       if minified && File.exists?("#{download_path}/package/dist/#{dep}.min.css")
-        `mv #{download_path}/dist/#{dep}.min.css #{dest_path}/#{dep}.css`
+        `mv #{download_path}/package/dist/#{dep}.min.css #{dest_path}/#{dep}.css`
       else
-        `mv #{download_path}/dist/#{dep}.css #{dest_path}/#{dep}.css`
+        `mv #{download_path}/package/dist/#{dep}.css #{dest_path}/#{dep}.css`
       end
     end
 
